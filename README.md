@@ -1,4 +1,4 @@
-# FireАiles.ai backup tool
+# FireFiles.ai backup tool
 
 Script to backup and clean records from firefiles.ai account.
 
