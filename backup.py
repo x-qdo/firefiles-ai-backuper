@@ -84,7 +84,7 @@ def delete_meeting(token, meeting_id):
 
 def backup_meetings(token, backup_location, cleanup_transcript=False, backup_transcript=True):
     api_key = token
-    skip = 100
+    skip = 50
     limit = 10
     while True:
         response = get_meetings_info(skip, limit, api_key)
