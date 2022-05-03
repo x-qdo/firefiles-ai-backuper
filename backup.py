@@ -43,9 +43,9 @@ def get_meetings_info(skip, limit, api_key):
     return response.json()
 
 
-def get_audio_url(meeting_id, meeting_title):
-    return 'https://rtmp-server-ff.s3.amazonaws.com/{0}/{1}-{0}.mp3' \
-        .format(meeting_id, re.sub(r"[^A-Za-z]", "", meeting_title, 0, re.MULTILINE))
+def get_audio_url(meeting_id):
+    return 'https://rtmp-server-ff.s3.amazonaws.com/{0}/audio.mp3' \
+        .format(meeting_id)
 
 
 def get_folder_path(backup_location, meeting_date):
@@ -82,25 +82,25 @@ def delete_meeting(token, meeting_id):
     print(response.json())
 
 
-def backup_meetings(token, backup_location, cleanup_transcript=False, backup_transcript=True):
+def backup_meetings(token, backup_location, cleanup_transcript=False, backup_transcript=True, skip=50):
     api_key = token
-    skip = 50
+    current_skip = skip
     limit = 10
     while True:
-        response = get_meetings_info(skip, limit, api_key)
+        response = get_meetings_info(current_skip, limit, api_key)
         if 'errors' in response:
             print(response['errors'])
             break
         for meeting in response['data']['transcripts']:
             print('backing up meeting ID:{} {}'.format(meeting['id'], get_filename(meeting['date'], meeting['title'])))
 
-            if backup_transcript:
+            if backup_transcript and meeting['sentences'] is not None:
                 save_meeting_sentences_to_csv('{}/{}'.format(get_folder_path(backup_location, meeting['date']),
                                                              get_filename(meeting['date'], meeting['title'],
                                                                           'transcript.csv')),
                                               meeting['sentences'])
 
-            r = requests.get(get_audio_url(meeting['id'], meeting['title']))
+            r = requests.get(get_audio_url(meeting['id']))
             with open('{}/{}'.format(get_folder_path(backup_location, meeting['date']),
                                      get_filename(meeting['date'], meeting['title'])), 'wb') as f:
                 f.write(r.content)
@@ -111,7 +111,7 @@ def backup_meetings(token, backup_location, cleanup_transcript=False, backup_tra
         if len(response['data']['transcripts']) < limit:
             break
 
-        skip += limit
+        current_skip += limit
 
 
 parser = argparse.ArgumentParser(description='FireFiles backup tool')
@@ -120,6 +120,7 @@ parser.add_argument('--token', required=True, help='Personal auth topic. Can be 
 parser.add_argument('--backup-location', default='./backup')
 parser.add_argument('--backup-transcript', action='store_false')
 parser.add_argument('--cleanup-transcript', action='store_true')
+parser.add_argument('--skip', default=50, type=int, help='Number of meetings to skip from start')
 
 args = parser.parse_args()
 backup_meetings(**vars(args))
